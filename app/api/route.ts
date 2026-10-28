@@ -40,7 +40,7 @@ function mapItem(item: any) {
       text(item['dc:creator']) ||
       text(item.author),
     thumbnail,
-    description: text(item.description),
+    description: content,
     content,
     enclosure: item.enclosure?.$ ?? {},
     categories: item.category
@@ -63,7 +63,7 @@ function getCorsHeaders(request: Request) {
   const headers = new Headers({
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Origin': '*',
+   'Access-Control-Allow-Origin': 'https://homesheatandhealthykids.github.io',
   });
 
 //  if (origin && allowedOrigins.includes(origin)) {
