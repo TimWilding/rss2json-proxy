@@ -2,6 +2,56 @@
 
 import { parseStringPromise } from 'xml2js';
 
+function text(value: any): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return text(value[0]);
+  if (typeof value === 'object' && '_' in value) {
+    return text(value._);
+  }
+  return '';
+}
+
+function normaliseDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, '');
+}
+
+function mapItem(item: any) {
+  const content =
+    text(item['content:encoded']) ||
+    text(item.description);
+
+  const thumbnail =
+    text(item['media:thumbnail']?.$?.url) ||
+    text(item.enclosure?.$?.url);
+
+  return {
+    title: text(item.title),
+    pubDate: normaliseDate(text(item.pubDate)),
+    link: text(item.link),
+    guid: text(item.guid?._) || text(item.guid),
+    author:
+      text(item['dc:creator']) ||
+      text(item.author),
+    thumbnail,
+    description: text(item.description),
+    content,
+    enclosure: item.enclosure?.$ ?? {},
+    categories: item.category
+      ? (Array.isArray(item.category)
+          ? item.category
+          : [item.category]
+        ).map(text)
+      : [],
+  };
+}
+
 const allowedOrigins = [
   'https://homesheatandhealthykids.github.io',
   'https://icu-heart.github.io/',
@@ -13,7 +63,7 @@ function getCorsHeaders(request: Request) {
   const headers = new Headers({
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Origin': 'https://homesheatandhealthykids.github.io',
+    'Access-Control-Allow-Origin': '*',
   });
 
 //  if (origin && allowedOrigins.includes(origin)) {
@@ -79,14 +129,46 @@ export async function GET(request: Request) {
       );
     }
 
+
     const data = await res.text();
+
     const parsed = await parseStringPromise(data, {
       explicitArray: false,
     });
 
-    return Response.json(parsed, {
-      headers: corsHeaders,
-    });
+    const channel = parsed.rss?.channel;
+
+    if (!channel) {
+      return Response.json(
+        { status: 'error', message: 'Invalid RSS feed' },
+        { status: 502, headers: corsHeaders }
+      );
+    }
+
+    const rawItems = channel.item
+      ? Array.isArray(channel.item)
+        ? channel.item
+        : [channel.item]
+      : [];
+
+    const feed = {
+      url: rss,
+      title: text(channel.title),
+      link: text(channel.link),
+      author: text(channel['dc:creator']),
+      description: text(channel.description),
+      image: text(channel.image?.url),
+    };
+
+    return Response.json(
+      {
+        status: 'ok',
+        feed,
+        items: rawItems.map(mapItem),
+      },
+      { headers: corsHeaders }
+    );
+
   } catch (error) {
     console.error(error);
 
