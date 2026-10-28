@@ -13,12 +13,12 @@ function getCorsHeaders(request: Request) {
   const headers = new Headers({
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Vary': 'Origin',
+    'Access-Control-Allow-Origin': 'https://homesheatandhealthykids.github.io',
   });
 
-  if (origin && allowedOrigins.includes(origin)) {
-    headers.set('Access-Control-Allow-Origin', origin);
-  }
+//  if (origin && allowedOrigins.includes(origin)) {
+//    headers.set('Access-Control-Allow-Origin', origin);
+//  }
 
   return headers;
 }
